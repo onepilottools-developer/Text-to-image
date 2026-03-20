@@ -3,102 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Grammar Checker with Highlights | OnePilotTools</title>
+    <title>AI Text Summarizer | OnePilotTools</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
     <style>
-        :root { --p: #007bff; --bg: #f8f9fa; --del: #fee2e2; --ins: #dcfce7; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 40px 20px; }
-        .card { width: 100%; max-width: 800px; background: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        :root { --p: #4f46e5; --bg: #f8fafc; --border: #e2e8f0; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
         
-        textarea { width: 100%; height: 180px; padding: 20px; border: 2px solid #e0e0e0; border-radius: 16px; font-size: 16px; margin-bottom: 20px; outline: none; transition: 0.3s; box-sizing: border-box; }
-        textarea:focus { border-color: var(--p); }
+        .container { width: 100%; max-width: 1100px; background: #fff; padding: 30px; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 20px; }
+        header { text-align: center; }
+        h1 { margin: 0; font-size: 30px; font-weight: 800; color: #1e293b; }
 
-        #check-btn { width: 100%; padding: 18px; background: var(--p); color: #fff; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .label { font-weight: 700; font-size: 12px; text-transform: uppercase; color: #64748b; margin-bottom: 8px; display: block; }
         
-        .result-box { display: none; margin-top: 30px; }
-        .diff-container { padding: 20px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #fdfdfd; line-height: 1.8; font-size: 17px; margin-bottom: 20px; }
-        
-        /* Highlighting Styles */
-        del { background-color: var(--del); color: #b91c1c; text-decoration: line-through; padding: 2px 4px; border-radius: 4px; margin: 0 2px; }
-        ins { background-color: var(--ins); color: #15803d; text-decoration: none; padding: 2px 4px; border-radius: 4px; margin: 0 2px; font-weight: 600; }
+        textarea, .output-box { width: 100%; height: 420px; padding: 20px; border: 2px solid var(--border); border-radius: 16px; font-size: 16px; line-height: 1.7; outline: none; transition: 0.3s; }
+        textarea { background: #fafafa; resize: none; }
+        textarea:focus { border-color: var(--p); background: #fff; }
+        .output-box { background: #fff; overflow-y: auto; white-space: pre-wrap; position: relative; }
 
-        .final-output { background: #f1f5f9; padding: 20px; border-radius: 12px; font-weight: 500; border-left: 5px solid var(--p); }
-        .loader { display: none; text-align: center; margin: 20px; color: var(--p); font-weight: bold; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 15px 25px; border-radius: 15px; }
+        .controls { display: flex; gap: 15px; align-items: center; }
+        
+        select { padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: 600; cursor: pointer; }
+        
+        #action-btn { padding: 14px 35px; background: var(--p); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        #action-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 70, 229, 0.3); }
+        #action-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+
+        .btn-group { margin-top: 10px; display: flex; gap: 10px; justify-content: flex-end; }
+        .util-btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; display: none; }
+        
+        #loader { display: none; font-weight: 700; color: var(--p); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } textarea, .output-box { height: 300px; } }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h1 style="text-align:center;">AI Grammar Highlighter</h1>
-    <p style="text-align:center; color:#666;">See exactly what the AI changed in your text.</p>
+<div class="container">
+    <header><h1>OnePilot AI Summarizer</h1></header>
 
-    <textarea id="text-input" placeholder="Paste your text with mistakes here..."></textarea>
-    
-    <div class="loader" id="loader">Analyzing Grammar...</div>
-    <button id="check-btn">Find & Fix Mistakes</button>
+    <div class="grid">
+        <div class="col">
+            <span class="label">Source Content</span>
+            <textarea id="input" placeholder="Paste your long article or text here..."></textarea>
+            <div style="font-size: 12px; color: #94a3b8; margin-top: 5px;">Words: <span id="w-count">0</span> / 2000</div>
+        </div>
+        <div class="col">
+            <span class="label">AI Summary</span>
+            <div class="output-box" id="output">Result will appear here...</div>
+            <div class="btn-group">
+                <button id="dl-btn" class="util-btn" style="background:#6366f1; color:white;">Download .txt</button>
+                <button id="cp-btn" class="util-btn" style="background:#10b981; color:white;">Copy Summary</button>
+            </div>
+        </div>
+    </div>
 
-    <div class="result-box" id="result-box">
-        <h3 style="margin-bottom:10px;">🔍 Changes Detected:</h3>
-        <div class="diff-container" id="diff-output"></div>
-
-        <h3 style="margin-bottom:10px;">✨ Perfect Version:</h3>
-        <div class="final-output" id="final-text"></div>
-        <button onclick="copyText()" style="margin-top:15px; padding:10px 20px; cursor:pointer; background:#10b981; color:white; border:none; border-radius:8px; font-weight:bold;">Copy Perfect Text</button>
+    <div class="toolbar">
+        <div class="controls">
+            <span>Length:</span>
+            <select id="length">
+                <option value="short">Short (Bullet Points)</option>
+                <option value="medium" selected>Medium (Balanced)</option>
+                <option value="long">Long (Detailed)</option>
+            </select>
+            <div id="loader">AI is thinking...</div>
+        </div>
+        <button id="action-btn">Summarize Content</button>
     </div>
 </div>
 
 <script>
-    const checkBtn = document.getElementById('check-btn');
-    const input = document.getElementById('text-input');
-    const resultBox = document.getElementById('result-box');
-    const diffOutput = document.getElementById('diff-output');
-    const finalText = document.getElementById('final-text');
-    const loader = document.getElementById('loader');
+    // 👇 APNA WORKER URL YAHA DALAIN 👇
+    const WORKER_URL = "// Is line ko update karein:
+const WORKER_URL = "https://blue-math-eb4aonepilot-summarizer.onepilottools.workers.dev/";"; 
 
-    checkBtn.onclick = async () => {
-        const original = input.value.trim();
-        if (original.length < 5) return alert("Bahi, kuch to likhein!");
+    const btn = document.getElementById('action-btn');
+    const input = document.getElementById('input');
+    const output = document.getElementById('output');
+    const wCount = document.getElementById('w-count');
+    const cpBtn = document.getElementById('cp-btn');
+    const dlBtn = document.getElementById('dl-btn');
 
-        checkBtn.disabled = true;
-        loader.style.display = "block";
-        resultBox.style.display = "none";
+    input.addEventListener('input', () => {
+        const words = input.value.trim() ? input.value.trim().split(/\s+/).length : 0;
+        wCount.innerText = words;
+        wCount.style.color = words > 2000 ? "red" : "#94a3b8";
+    });
+
+    btn.onclick = async () => {
+        const text = input.value.trim();
+        if(!text) return alert("Bahi, pehle text to likhen!");
+        if(text.split(/\s+/).length > 2000) return alert("Limit 2000 words hai!");
+
+        btn.disabled = true;
+        document.getElementById('loader').style.display = "block";
+        output.innerText = "Analyzing and summarizing your text...";
+        cpBtn.style.display = "none";
+        dlBtn.style.display = "none";
 
         try {
-            const res = await fetch("https://gentle-dream-3790onepilot-grammar-ai.onepilottools.workers.dev/", {
+            const res = await fetch(WORKER_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: original })
+                body: JSON.stringify({ text: text, length: document.getElementById('length').value })
             });
             const data = await res.json();
-            const corrected = data.corrected;
-
-            // Highlight Logic using jsdiff
-            const diff = Diff.diffWords(original, corrected);
-            let diffHtml = "";
-
-            diff.forEach((part) => {
-                const color = part.added ? 'ins' : part.removed ? 'del' : 'span';
-                const tag = part.added ? 'ins' : part.removed ? 'del' : 'span';
-                diffHtml += `<${tag}>${part.value}</${tag}>`;
-            });
-
-            diffOutput.innerHTML = diffHtml;
-            finalText.innerText = corrected;
-            resultBox.style.display = "block";
+            
+            if(data.summary) {
+                output.innerText = data.summary;
+                cpBtn.style.display = "block";
+                dlBtn.style.display = "block";
+            } else {
+                output.innerText = "Error: AI could not generate summary.";
+            }
         } catch (e) {
-            alert("Connection Error!");
+            output.innerText = "Connection Error! Please check your Worker URL.";
         } finally {
-            checkBtn.disabled = false;
-            loader.style.display = "none";
+            btn.disabled = false;
+            document.getElementById('loader').style.display = "none";
         }
     };
 
-    function copyText() {
-        navigator.clipboard.writeText(finalText.innerText);
-        alert("Text Copied!");
-    }
-</script>
+    cpBtn.onclick = () => {
+        navigator.clipboard.writeText(output.innerText);
+        cpBtn.innerText = "Copied!";
+        setTimeout(() => cpBtn.innerText = "Copy Summary", 2000);
+    };
 
+    dlBtn.onclick = () => {
+        const blob = new Blob([output.innerText], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'onepilot-summary.txt';
+        a.click();
+    };
+</script>
 </body>
 </html>
